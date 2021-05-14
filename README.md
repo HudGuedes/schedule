@@ -1,24 +1,8 @@
-# README
+<h1 align="center">Schedule</h1>
 
-This README would normally document whatever steps are necessary to get the
-application up and running.
+Trata-se de um projeto, onde a pessoa logada poderá reservar, controlar a sala de reunião com data e horário.
 
-Things you may want to cover:
+## Frameworks utilizados
 
-* Ruby version
-
-* System dependencies
-
-* Configuration
-
-* Database creation
-
-* Database initialization
-
-* How to run the test suite
-
-* Services (job queues, cache servers, search engines, etc.)
-
-* Deployment instructions
-
-* ...
+- Ruby 2.7.2
+- Rails 6.1.3
