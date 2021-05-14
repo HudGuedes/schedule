@@ -1,0 +1,27 @@
+<div class="login text-center">
+  <div class="form-signin">
+    <%= form_for(resource, as: resource_name, url: registration_path(resource_name)) do |f| %>
+      <h1 class="h3 mb-3 fw-normal">Sign up</h1>
+
+      <div class="form-floating">
+        <%= f.text_field :name, autofocus: true, autocomplete: "name", class: 'form-control', id: 'floatingInputName', placeholder: "Name" %>
+        <%= f.label :name, for: 'floatingInputName'  %>
+      </div>
+      <div class="form-floating">
+        <%= f.email_field :email, autofocus: true, autocomplete: "email", class: 'form-control', id: 'floatingInput', placeholder: "name@example.com" %>
+        <%= f.label :email, for: 'floatingInput'  %>
+      </div>
+       <div class="form-floating">
+        <%= f.password_field :password, autocomplete: "current-password", class: 'form-control', id: 'floatingPassword', placeholder: "Password" %>
+        <%= f.label :password, for: 'floatingPassword' %>
+      </div>
+      <div class="form-floating">
+        <%= f.password_field :password_confirmation, autocomplete: "current-password", class: 'form-control', id: 'floatingPasswordConfirmation', placeholder: "Password" %>
+        <%= f.label :password_confirmation, for: 'floatingPasswordConfirmation' %>
+      </div>
+      <%= f.submit "Sign up", class: 'w-100 mt-4 btn btn-lg btn-primary' %>
+    <% end %>
+    <br clear="all"/>
+    <%= render "devise/shared/links" %>
+  </div>
+</div>

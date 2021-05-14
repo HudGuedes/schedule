@@ -1,0 +1,215 @@
+<div class="container">
+    <div id='calendar' class="mt-5 mb-5"></div>
+</div>
+
+<div class="modal" id="createModal" tabindex="-1" role="dialog">
+    <div class="modal-dialog" role="document">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title">Agendamento</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body">
+          <p id="event_day"></p>
+          <div class="errors"></div>
+          <form>
+            <div class="form-group">
+                <label>Descrição:</label>
+                <input type="text" name="description" id="description" class="form-control">
+            </div>
+            <input type="hidden" name="initial_date" id="initial_date" value="">
+          </form>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Fechar</button>
+          <button type="button" class="btn btn-primary" id="save">Salvar</button>
+        </div>
+      </div>
+    </div>
+</div>
+
+<div class="modal" id="errorModal" tabindex="-1" role="dialog">
+    <div class="modal-dialog" role="document">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title">Erro</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body">
+            <div class="alert alert-danger">
+                - Data ou horario da reserva invalido.
+            </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Fechar</button>
+        </div>
+      </div>
+    </div>
+</div>
+
+<div class="modal" id="showModal" tabindex="-1" role="dialog">
+    <div class="modal-dialog" role="document">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title" id="item-date"></h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body">
+            <table class="table table-bordered">
+                <tbody>
+                   <tr>
+                        <th>Descrição</th>
+                        <td id="item-description"></td>
+                   </tr>
+                   <tr>
+                        <th>Horário</th>
+                        <td id="item-hour"></td>
+                   </tr>
+                   <tr>
+                        <th>Usuario</th>
+                        <td id="item-user"></td>
+                   </tr>
+                </tbody>
+            </table>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Fechar</button>
+          <button type="button" id="item-cancel" class="btn btn-danger" style="display: none">Cancelar Reserva</button>
+        </div>
+      </div>
+    </div>
+</div>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        var calendarEl = document.getElementById('calendar');
+        var dateNow = new Date()
+        var loader = '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span><span class="sr-only">Loading...</span>'
+        var calendar = new FullCalendar.Calendar(calendarEl, {
+            initialView: 'timeGridWeek',
+            views: {
+              timeGridWeek: {
+                type: 'timeGrid',
+                duration: { days: 7 },
+                buttonText: '7 day'
+              }
+            },
+            header: {
+                left: '',
+                center: 'title',
+                right: 'prev,next'
+            },
+            allDaySlot: false,
+            locale: 'pt-Br',
+            events: [],
+            locale: 'pt-Br',
+            events: <%= @events.to_json.html_safe %>,
+            businessHours: {
+              // days of week. an array of zero-based day of week integers (0=Sunday)
+                daysOfWeek: [ 1, 2, 3, 4 ,5], // Monday - Thursday
+                startTime: '06:00', // 8am
+                endTime: '23:00' // 6pm
+            },
+            dateClick: function(info) {
+                hour = info.date.getHours()
+                dayIndex = info.date.getDay()
+                if(info.date >= dateNow && hour >= 6 && hour < 23 && dayIndex != 0 && dayIndex != 6){
+                    $('#initial_date').val(info.dateStr.replace('-03:00',''))
+                    $('#event_day').text("Data: "+formatDate(info.date)+" das "+hour+" às "+(hour+1))
+                    $('#createModal').modal('toggle')
+                }else{
+                    $('#errorModal').modal('toggle')
+                }
+            },
+            eventClick: function(info) {
+                $.ajax({
+                    url: '/events/'+info.event.id
+                }).done(function( data ) {
+                    initial_date = new Date(data.initial_date.split('.')[0])
+                    final_date = new Date(data.final_date.split('.')[0])
+                    current_user = <%= current_user.id %>
+                    $('#item-date').text(formatDate(initial_date))
+                    $('#item-description').text(data.description)
+                    $('#item-hour').text(initial_date.getHours()+' as '+final_date.getHours())
+                    $('#item-user').text(data.user.name)
+                    //Condição para aparecer o botão de cancelar a reserva
+                    if(data.user_id == current_user && initial_date > dateNow){
+                        $('#item-cancel').data('id',data.id)
+                        $('#item-cancel').show()
+                    }else{
+                        $('#item-cancel').hide()
+                    }
+                    $('#showModal').modal('toggle')
+                })
+            }
+        });
+        calendar.render();
+         $('#item-cancel').click(function() {
+            id = $('#item-cancel').data('id')
+            $.ajax({
+                url: '/events/'+id,
+                data: { authenticity_token: $('[name="csrf-token"]')[0].content },
+                method: 'delete',
+                beforeSend: function(){
+                    $('#item-cancel').html(loader);
+                    $('#item-cancel').prop('disabled',true)
+                }
+            }).done(function( data ) {
+                backState('item-cancel', 'Cancelar Reserva');
+                event = calendar.getEventById(id);
+                event.remove();
+                $('#showModal').modal('toggle')
+            })
+        });
+
+        $('#save').click(function(e){
+            e.preventDefault()
+            $.ajax({
+                url: '/events',
+                method: 'post',
+                data: { 
+                    description: $('#description').val(), 
+                    initial_date: $('#initial_date').val(),
+                    authenticity_token: $('[name="csrf-token"]')[0].content,
+                },
+                beforeSend: function(){
+                    $('#save').html(loader);
+                    $('#save').prop('disabled',true)
+                }
+            }).done(function( data ) {
+                $('.errors').hide()
+                backState('save', 'Salvar');
+                calendar.addEvent({
+                    id: data.id,
+                    start: data.initial_date.split('.')[0],
+                    end: data.final_date.split('.')[0],
+                    title: data.description
+                });
+                $('#createModal').modal('toggle')
+            }).fail(function(data){
+                backState('save', 'Salvar');
+                $('.errors').show()
+                html = ''
+                $.each(data.responseJSON.errors, function( index, value ) {
+                  html += "<div class='alert alert-danger'>"+index+": "+value.join()+"</div>"
+                });
+                $('.errors').html(html)
+            })
+        })
+    });
+
+    function formatDate(date){
+        var options = {year: 'numeric', month: 'long', day: 'numeric' };
+        return date.toLocaleDateString('br-BR', options);
+    }
+
+    Date.prototype.addHours= function(h){
+        this.setHours(this.getHours()+h);
+        return this;
+    }
+
+    function backState(id, text){
+        $('#'+id).html(text);
+        $('#'+id).prop('disabled',false)
+    }
+</script>
